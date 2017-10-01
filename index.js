@@ -1,67 +1,34 @@
-const crypto = require('crypto')
+const express = require('express')
+const app = express()
 const util = require('util')
-const hashString = input => crypto.createHash('sha256').update(input).digest('hex')
+const Blockchain = require('./models/blockchain')
+const args = require('minimist')(process.argv.slice(2))
+const port = args.port || 3000
 
-class Block {
-  constructor(index, prevHash, transactions, nonce) {
-    this.index = index
-    this.prevHash = prevHash
-    this.transactions = transactions
-    this.timestamp = Date.now()
-    this.nonce = nonce
-  }
-  get hash() {
-    return hashString(JSON.stringify(this))
-  }
-}
-
-class Blockchain {
-  constructor(difficulty = '000') {
-    this.difficulty = difficulty
-    this.transactions = []
-    this.chain = []
-    this.mineBlock() // Genesis block
-  }
-
-  get lastBlock() {
-    const index = this.chain.length - 1
-    return index >= 0 ? this.chain[index] : null
-  }
-
-  addTransaction(from, to, qty) {
-    this.transactions.push({ from, to, qty })
-  }
-
-  mineBlock() {
-    let nonce = 0
-    while (true) {
-      const lastBlock = this.lastBlock
-      let index, prevHash
-      if (!lastBlock) {
-        index = 0
-        prevHash = 0
-      } else {
-        index = lastBlock.index + 1
-        prevHash = lastBlock.hash
-      }
-      const transactions = JSON.parse(JSON.stringify(this.transactions))
-      const block = new Block(index, prevHash, transactions, nonce)
-      if (block.hash.startsWith(this.difficulty)) {
-        this.chain.push(block)
-        this.transactions = []
-        return block
-      } else {
-        nonce += 1
-      }
-    }
-  }
-}
-
-const blockchain = new Blockchain('00')
+const blockchain = new Blockchain('000')
 blockchain.addTransaction('henk', 'klaas', 5)
 blockchain.addTransaction('piet', 'gerrit', 2)
 blockchain.mineBlock()
 blockchain.addTransaction('daan', 'terry', 3)
 blockchain.addTransaction('marco', 'peter', 1)
 blockchain.mineBlock()
-console.log(util.inspect(blockchain.chain, false, null))
+
+app.use((req, res, next) => {
+  req.node = req.protocol + '://' + req.get('host') + req.originalUrl
+  next()
+})
+
+app.get('/', (req, res) => {
+  const node = req.node
+  res.send({ node })
+})
+
+app.get('/chain', (req, res) => {
+  res.json(blockchain.chain)
+})
+
+app.listen(port, () => {
+  console.log(`Node listening on port ${port}`)
+})
+
+// console.log(util.inspect(blockchain.chain, false, null))
