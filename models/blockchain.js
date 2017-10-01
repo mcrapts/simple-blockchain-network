@@ -1,5 +1,6 @@
 const Block = require('./block')
 const Node = require('./node')
+const request = require('axios')
 
 class Blockchain {
   constructor(difficulty = '000') {
@@ -18,30 +19,34 @@ class Blockchain {
 
   addTransaction(from, to, qty) {
     this.transactions.push({ from, to, qty })
+    this.nodes.forEach(({ address }) => {
+      request.post(address + '/transaction', { from, to, qty })
+    })
   }
 
   mineBlock() {
     let nonce = 0
     while (true) {
       const lastBlock = this.lastBlock
-      let index, prevHash
-      if (!lastBlock) {
-        index = 0
-        prevHash = 0
-      } else {
-        index = lastBlock.index + 1
-        prevHash = lastBlock.hash
-      }
+      const index = lastBlock ? lastBlock.index + 1 : 0
+      const prevHash = lastBlock ? lastBlock.hash : 0
       const transactions = JSON.parse(JSON.stringify(this.transactions))
       const block = new Block(index, prevHash, transactions, nonce)
       if (block.hash.startsWith(this.difficulty)) {
-        this.chain.push(block)
-        this.transactions = []
+        this.addBlockToChain(block)
         return block
       } else {
         nonce += 1
       }
     }
+  }
+
+  addBlockToChain(block) {
+    this.chain.push(block)
+    this.transactions = []
+    this.nodes.forEach(({ address }) => {
+      request.post(address + '/resolve')
+    })
   }
 
   validateChain(chain) {
@@ -57,10 +62,20 @@ class Blockchain {
     return !blocksValid.some(validBlock => validBlock === false)
   }
 
-  registerNode(id) {
-    const node = this.nodes.find(node => node.id === id)
-    if (!node) this.nodes.push(new Node(id))
+  registerNode(address) {
+    const node = this.nodes.find(node => node.address === address)
+    if (!node) this.nodes.push(new Node(address))
     return this.nodes
+  }
+
+  resolveChain() {
+    this.nodes.forEach(async ({ address }) => {
+      const chain = await request.get(address + '/chain')
+      if (this.validateChain(chain) && chain.length > this.chain.length) {
+        this.chain = chain
+        // what about transactions...?
+      }
+    })
   }
 }
 module.exports = Blockchain

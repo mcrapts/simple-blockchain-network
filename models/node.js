@@ -1,9 +1,9 @@
 module.exports = class Node {
-  constructor(id) {
-    this.id = id
+  constructor(address) {
+    this.address = address
     this.registeredAt = Date.now()
-    this.lastSync = 0
-    this.transactions = []
-    this.chain = []
+    // this.lastSync = 0
+    // this.transactions = []
+    // this.chain = []
   }
 }
