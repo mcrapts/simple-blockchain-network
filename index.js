@@ -17,7 +17,7 @@ class Blockchain {
     this.difficulty = difficulty
     this.transactions = []
     this.chain = []
-    this.mineBlock()
+    this.mineBlock() // Genesis block
   }
 
   get lastBlock() {
@@ -27,7 +27,6 @@ class Blockchain {
 
   addTransaction(from, to, qty) {
     this.transactions.push({ from, to, qty })
-    return this.lastBlock.index + 1
   }
 
   hashBlock(block) {
@@ -55,7 +54,7 @@ class Blockchain {
   }
 }
 
-const blockchain = new Blockchain('0000')
+const blockchain = new Blockchain('00')
 blockchain.addTransaction('henk', 'klaas', 5)
 blockchain.addTransaction('piet', 'gerrit', 2)
 blockchain.mineBlock()
