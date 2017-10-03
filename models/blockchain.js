@@ -1,5 +1,6 @@
 const Block = require('./block')
 const Node = require('./node')
+const Transaction = require('./transaction')
 const request = require('axios')
 const { hashString } = require('../utils')
 
@@ -10,6 +11,7 @@ class Blockchain {
     this.transactions = []
     this.chain = []
     this.nodes = []
+    this.hashes = []
     this.mineBlock() // Genesis block
   }
 
@@ -23,7 +25,7 @@ class Blockchain {
   }
 
   addTransaction(from, to, qty) {
-    this.transactions.push({ from, to, qty })
+    this.transactions.push(new Transaction(from, to, qty))
     this.nodes.forEach(({ address }) => {
       request.post(address + '/transaction', { from, to, qty })
     })
@@ -48,6 +50,7 @@ class Blockchain {
 
   addBlockToChain(block) {
     this.chain.push(block)
+    this.hashes[block.index] = this.getHash(block)
     this.transactions = []
     this.nodes.forEach(({ address }) => {
       request.post(address + '/resolve')

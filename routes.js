@@ -18,7 +18,9 @@ router.get('/', (req, res) => {
 })
 
 router.get('/chain', (req, res) => {
-  res.json(blockchain.chain)
+  const chain = blockchain.chain
+  const hashes = blockchain.hashes
+  res.json({ chain, hashes })
 })
 
 router.get('/transactions', (req, res) => {
