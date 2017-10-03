@@ -25,6 +25,10 @@ router.get('/transactions', (req, res) => {
   res.send(blockchain.transactions)
 })
 
+router.get('/nodes', (req, res) => {
+  res.send(blockchain.nodes)
+})
+
 router.post('/transaction', (req, res) => {
   const { from, to, qty } = req.body
   console.log({ from, to, qty })
@@ -37,10 +41,14 @@ router.post('/resolve', (req, res) => {
   res.sendStatus(200)
 })
 
-router.post('/register', (req, res) => {
+router.post('/register', async (req, res) => {
   const { address } = req.body
-  blockchain.registerNode(address)
-  res.send(blockchain.nodes)
+  try {
+    const result = await blockchain.registerNode(address)
+    res.send(result)
+  } catch (error) {
+    res.send({ error: error.message })
+  }
 })
 
 module.exports = router

@@ -1,6 +1,7 @@
 const Block = require('./block')
 const Node = require('./node')
 const request = require('axios')
+const { hashString } = require('../utils')
 
 class Blockchain {
   constructor(difficulty = '000') {
@@ -12,9 +13,13 @@ class Blockchain {
     this.mineBlock() // Genesis block
   }
 
-  get lastBlock() {
+  getLastBlock() {
     const index = this.chain.length - 1
     return index >= 0 ? this.chain[index] : null
+  }
+
+  getHash(block) {
+    return hashString(JSON.stringify(block))
   }
 
   addTransaction(from, to, qty) {
@@ -27,12 +32,12 @@ class Blockchain {
   mineBlock() {
     let nonce = 0
     while (true) {
-      const lastBlock = this.lastBlock
+      const lastBlock = this.getLastBlock()
       const index = lastBlock ? lastBlock.index + 1 : 0
-      const prevHash = lastBlock ? lastBlock.hash : 0
+      const prevHash = lastBlock ? this.getHash(lastBlock) : 0
       const transactions = JSON.parse(JSON.stringify(this.transactions))
       const block = new Block(index, prevHash, transactions, nonce)
-      if (block.hash.startsWith(this.difficulty)) {
+      if (this.getHash(block).startsWith(this.difficulty)) {
         this.addBlockToChain(block)
         return block
       } else {
@@ -52,7 +57,7 @@ class Blockchain {
   validateChain(chain) {
     const blocksValid = chain.map(block => {
       const prevBlock = chain[block.index - 1]
-      if (prevBlock && (block.prevHash !== prevBlock.hash)) {
+      if (prevBlock && (block.prevHash !== this.getHash(prevBlock))) {
         console.log('Chain is not valid')
         return false
       }
@@ -62,10 +67,19 @@ class Blockchain {
     return !blocksValid.some(validBlock => validBlock === false)
   }
 
-  registerNode(address) {
+  async registerNode(address) {
     const node = this.nodes.find(node => node.address === address)
-    if (!node) this.nodes.push(new Node(address))
-    return this.nodes
+    if (!node) {
+      try {
+        await request(address)
+        this.nodes.push(new Node(address))
+        return this.nodes
+      } catch (err) {
+        throw new Error('Unable to reach node')
+      }
+    } else {
+      throw new Error('Node already exists')
+    }
   }
 
   resolveChain() {

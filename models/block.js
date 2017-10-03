@@ -1,4 +1,3 @@
-const { hashString } = require('../utils')
 class Block {
   constructor(index, prevHash, transactions, nonce) {
     this.index = index
@@ -6,9 +5,6 @@ class Block {
     this.transactions = transactions
     this.timestamp = Date.now()
     this.nonce = nonce
-  }
-  get hash() {
-    return hashString(JSON.stringify(this))
   }
 }
 
