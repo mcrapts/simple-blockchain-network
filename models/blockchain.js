@@ -90,20 +90,41 @@ class Blockchain {
       const chain = data.chain
       if (this.validateChain(chain) && chain.length > this.chain.length) {
         this.chain = chain
+        this.resolveTransactions()
         this.nodes.forEach(node => request.post(node.address + '/resolve')
         )
       }
     })
   }
 
+  findTransaction(hash) {
+    const transactions = this.chain.reduce((arr, block) => {
+      return arr.concat(block.transactions)
+    }, [])
+    const transaction = transactions.find(t => t.hash === hash)
+    console.log('\nSearching for:')
+    console.log(hash)
+    console.log(transaction)
+
+    return transaction
+  }
+
   resolveTransactions() {
     this.nodes.forEach(async ({ address }) => {
-      const { data: transactions } = await request.get(address + '/transactions')
-      if (transactions.length >= this.transactions.length && (this.getHash(transactions) !== this.getHash(this.transactions))) {
+      let { data: transactions } = await request.get(address + '/transactions')
+      const transactionsNotInChain = transactions.filter(({ hash }) => {
+        return !(this.findTransaction(hash))
+      })
+      if ((transactionsNotInChain.length > this.transactions.length) && (this.getHash(transactions) !== this.getHash(this.transactions))) {
         this.transactions = transactions
+        console.log(this.transactions.length)
         this.nodes.forEach(node => request.post(node.address + '/resolve'))
       }
-      // console.log(this.transactions)
+      this.transactions.forEach((transaction, index) => {
+        if (this.findTransaction(transaction.hash)) {
+          this.transactions.splice(index, 1)
+        }
+      })
     })
   }
 }
