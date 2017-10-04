@@ -11,8 +11,13 @@ class Blockchain {
     this.transactions = []
     this.chain = []
     this.nodes = []
-    this.hashes = []
     this.mineBlock() // Genesis block
+  }
+
+  get hashes() {
+    return this.chain.map(block => {
+      return this.getHash(block)
+    })
   }
 
   getLastBlock() {
@@ -50,7 +55,6 @@ class Blockchain {
 
   addBlockToChain(block) {
     this.chain.push(block)
-    this.hashes[block.index] = this.getHash(block)
     this.transactions = []
     this.nodes.forEach(({ address }) => {
       request.post(address + '/resolve')
