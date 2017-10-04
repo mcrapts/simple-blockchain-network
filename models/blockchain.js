@@ -20,14 +20,14 @@ class Blockchain {
     return index >= 0 ? this.chain[index] : null
   }
 
-  getHash(block) {
-    return hashString(JSON.stringify(block))
+  getHash(obj) {
+    return hashString(JSON.stringify(obj))
   }
 
   addTransaction(from, to, qty) {
     this.transactions.push(new Transaction(from, to, qty))
     this.nodes.forEach(({ address }) => {
-      request.post(address + '/transaction', { from, to, qty })
+      request.post(address + '/resolve')
     })
   }
 
@@ -66,16 +66,15 @@ class Blockchain {
       }
       return true
     })
-    console.log(blocksValid)
     return !blocksValid.some(validBlock => validBlock === false)
   }
 
-  async registerNode(address) {
+  async registerNode(currentNode, address) {
     const node = this.nodes.find(node => node.address === address)
     if (!node) {
       try {
-        await request(address)
         this.nodes.push(new Node(address))
+        await request.post(address + '/register', currentNode)
         return this.nodes
       } catch (err) {
         throw new Error('Unable to reach node')
@@ -87,11 +86,24 @@ class Blockchain {
 
   resolveChain() {
     this.nodes.forEach(async ({ address }) => {
-      const chain = await request.get(address + '/chain')
+      const { data } = await request.get(address + '/chain')
+      const chain = data.chain
       if (this.validateChain(chain) && chain.length > this.chain.length) {
         this.chain = chain
-        // what about transactions...?
+        this.nodes.forEach(node => request.post(node.address + '/resolve')
+        )
       }
+    })
+  }
+
+  resolveTransactions() {
+    this.nodes.forEach(async ({ address }) => {
+      const { data: transactions } = await request.get(address + '/transactions')
+      if (transactions.length >= this.transactions.length && (this.getHash(transactions) !== this.getHash(this.transactions))) {
+        this.transactions = transactions
+        this.nodes.forEach(node => request.post(node.address + '/resolve'))
+      }
+      // console.log(this.transactions)
     })
   }
 }

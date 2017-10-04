@@ -13,7 +13,7 @@ app.use((req, res, next) => {
 })
 app.use(bodyParser.json())
 app.use((req, res, next) => {
-  req.node = req.protocol + '://' + req.get('host')
+  req.node = { address: req.protocol + '://' + req.get('host') }
   next()
 })
 

@@ -39,18 +39,25 @@ router.post('/transaction', (req, res) => {
 })
 
 router.post('/resolve', (req, res) => {
+  console.log('Resolving')
   blockchain.resolveChain()
+  blockchain.resolveTransactions()
   res.sendStatus(200)
 })
 
 router.post('/register', async (req, res) => {
   const { address } = req.body
   try {
-    const result = await blockchain.registerNode(address)
+    const result = await blockchain.registerNode(req.node, address)
     res.send(result)
   } catch (error) {
     res.send({ error: error.message })
   }
+})
+
+router.post('/mine', (req, res) => {
+  blockchain.mineBlock()
+  res.sendStatus(200)
 })
 
 module.exports = router
