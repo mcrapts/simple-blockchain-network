@@ -32,7 +32,7 @@ class Blockchain {
   addTransaction(from, to, qty) {
     this.transactions.push(new Transaction(from, to, qty))
     this.nodes.forEach(({ address }) => {
-      request.post(address + '/resolve')
+      request.post(address + '/sync')
     })
   }
 
@@ -57,7 +57,7 @@ class Blockchain {
     this.chain.push(block)
     this.transactions = []
     this.nodes.forEach(({ address }) => {
-      request.post(address + '/resolve')
+      request.post(address + '/sync')
     })
   }
 
@@ -79,6 +79,7 @@ class Blockchain {
       try {
         this.nodes.push(new Node(address))
         await request.post(address + '/register', currentNode)
+        this.syncNode()
         return this.nodes
       } catch (err) {
         throw new Error('Unable to reach node')
@@ -88,15 +89,26 @@ class Blockchain {
     }
   }
 
-  resolveChain() {
+  syncNode() {
+    this.syncChain()
+    this.syncTransactions()
+  }
+
+  syncChain() {
+    const currentChainTimestamp = this.chain.find(block => block.index === 0).timestamp
     this.nodes.forEach(async ({ address }) => {
       const { data } = await request.get(address + '/chain')
       const chain = data.chain
-      if (this.validateChain(chain) && chain.length > this.chain.length) {
-        this.chain = chain
-        this.resolveTransactions()
-        this.nodes.forEach(node => request.post(node.address + '/resolve')
-        )
+      if (this.validateChain(chain)) {
+        console.log('Chain is valid!')
+        const chainTimestamp = chain.find(block => block.index === 0).timestamp
+        if (chain.length > this.chain.length || chainTimestamp < currentChainTimestamp) {
+          this.chain = chain
+          this.syncTransactions()
+          this.nodes.forEach(node => request.post(node.address + '/sync'))
+        } else {
+          console.log('hmm')
+        }
       }
     })
   }
@@ -109,11 +121,10 @@ class Blockchain {
     console.log('\nSearching for:')
     console.log(hash)
     console.log(transaction)
-
     return transaction
   }
 
-  resolveTransactions() {
+  syncTransactions() {
     this.nodes.forEach(async ({ address }) => {
       let { data: transactions } = await request.get(address + '/transactions')
       const transactionsNotInChain = transactions.filter(({ hash }) => {
@@ -122,7 +133,7 @@ class Blockchain {
       if ((transactionsNotInChain.length > this.transactions.length) && (this.getHash(transactions) !== this.getHash(this.transactions))) {
         this.transactions = transactions
         console.log(this.transactions.length)
-        this.nodes.forEach(node => request.post(node.address + '/resolve'))
+        this.nodes.forEach(node => request.post(node.address + '/sync'))
       }
       this.transactions.forEach((transaction, index) => {
         if (this.findTransaction(transaction.hash)) {
@@ -132,4 +143,5 @@ class Blockchain {
     })
   }
 }
+
 module.exports = Blockchain

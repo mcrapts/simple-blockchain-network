@@ -37,10 +37,9 @@ router.post('/transaction', (req, res) => {
   res.sendStatus(200)
 })
 
-router.post('/resolve', (req, res) => {
-  console.log('Resolving')
-  blockchain.resolveChain()
-  blockchain.resolveTransactions()
+router.post('/sync', (req, res) => {
+  console.log('Syncing')
+  blockchain.syncNode()
   res.sendStatus(200)
 })
 
